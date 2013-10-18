@@ -1,6 +1,6 @@
 <component-set>
     <components>
-        <component>
+   <!--     <component>
             <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
             <role-hint>classdepandjar</role-hint>
             <implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler</implementation>
@@ -11,7 +11,7 @@
                 <language>java</language>
                 <addedToClasspath>false</addedToClasspath>
             </configuration>
-        </component>
+        </component>-->
         <component>
             <role>org.apache.maven.artifact.handler.ArtifactHandler</role>
             <role-hint>oar</role-hint>
