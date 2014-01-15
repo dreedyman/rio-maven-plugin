@@ -49,7 +49,20 @@ public class UIMojo extends AbstractRioMojo {
         String groups = "";
         if(group!=null)
             groups="-Dorg.rioproject.groups="+group;
-        
-        ExecHelper.doExec("java -DRIO_HOME="+rioHome+" "+options+" "+groups+" -jar "+rioLib+"rio-ui.jar", false);
+        File rioLibDir = new File(rioLib);
+        String rioUI = null;
+        for(String jar : rioLibDir.list()) {
+            if(jar.startsWith("rio-ui")) {
+                rioUI = jar;
+                break;
+            }
+        }
+        String policy = String.format("-Djava.security.policy=%spolicy%spolicy.all", rioHome, File.separator);
+        if(rioUI==null) {
+            throw new MojoExecutionException("Unable to locate rio-ui JAR file");
+        }
+        String command = String.format("java %s -DRIO_HOME=%s %s %s -jar %s%s", policy, rioHome, options, groups, rioLib, rioUI);
+        getLog().debug(command);
+        ExecHelper.doExec(command, false);
     }
 }

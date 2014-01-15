@@ -62,13 +62,6 @@
                     <project implementation="org.rioproject.tools.maven.ProjectStub"/>
                     <!-- END default values set by Maven mechanism -->
                     <opstring>opstring/phony.groovy</opstring>
-                    <createJar>
-                        <classifier>dl</classifier>
-                        <in>com.vibrantmedia.customerservice.mozart</in>
-                        <topclasses>
-                            <topClass>com.vibrantmedia.customerservice.mozart.CustomerService</topClass>
-                        </topclasses>
-                    </createJar>
                 </configuration>
             </plugin>
         </plugins>

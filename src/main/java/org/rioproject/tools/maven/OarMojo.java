@@ -15,14 +15,18 @@
  */
 package org.rioproject.tools.maven;
 
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.handler.DefaultArtifactHandler;
+import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
 import org.apache.maven.project.artifact.AttachedArtifact;
+import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.Jar;
 import org.apache.tools.ant.taskdefs.Manifest;
 import org.apache.tools.ant.taskdefs.ManifestException;
+import org.apache.tools.ant.types.Path;
 import org.apache.tools.ant.types.ZipFileSet;
 import org.codehaus.plexus.util.FileUtils;
 
@@ -43,7 +47,15 @@ import java.util.List;
  * @requiresProject true
  * @requiresDependencyResolution
  */
-public class OarMojo extends ClassDepAndJarMojo {
+public class OarMojo extends AbstractMojo {
+    /**
+     * The maven project.
+     *
+     * @parameter expression="${project}"
+     * @required
+     * @readonly
+     */
+    protected MavenProject project;
 
     /**
      * Name of the OAR.
@@ -91,6 +103,8 @@ public class OarMojo extends ClassDepAndJarMojo {
      * @component
      */
     private MavenProjectHelper projectHelper;
+    private Project antProject = new Project();
+
 
     public void execute() throws MojoExecutionException {
         File opstringFile = getOpStringFile();
@@ -98,6 +112,14 @@ public class OarMojo extends ClassDepAndJarMojo {
             getLog().debug("The opstring ["+opstring+"] does not exist, cannot build OAR");
             return;
         }
+        File contentDirectory = new File(project.getBuild().getOutputDirectory());
+        String outputDir = project.getBuild().getDirectory();
+        getLog().debug("Project Name    : "+project.getName());
+        getLog().debug("Artifact ID     : "+project.getArtifactId());
+        getLog().debug("Build Directory : "+outputDir)       ;
+        getLog().debug("Project Base Dir : "+project.getBasedir());
+        getLog().debug("Build Dir        : "+project.getBuild().getDirectory());
+        getLog().debug("Build Output Dir : "+contentDirectory.getPath());
 
         List<Repository> remoteRepositories = new ArrayList<Repository>();
         try {
@@ -129,10 +151,9 @@ public class OarMojo extends ClassDepAndJarMojo {
             throw new MojoExecutionException("Building Repository list", e);
         }
 
-        doExecute(getMavenProject(), false);                
         getLog().info("Building OAR: "+getOarFileName());
         if(getOarName()==null)
-            oarName = getMavenProject().getArtifactId();
+            oarName = project.getArtifactId();
         Jar oar = new Jar();
         oar.setProject(antProject);
         File oarFile = new File(getOarFileName());
@@ -151,8 +172,8 @@ public class OarMojo extends ClassDepAndJarMojo {
         }
 
         /* Add the pom */
-        File projectPath = getMavenProject().getBasedir();
-        String pomName = getMavenProject().getBuild().getFinalName();
+        File projectPath = project.getBasedir();
+        String pomName = project.getBuild().getFinalName();
         File tempPom = new File(System.getProperty("java.io.tmpdir"), pomName+".pom");
         tempPom.deleteOnExit();
         File projectPom = new File(projectPath, "pom.xml");
@@ -173,7 +194,7 @@ public class OarMojo extends ClassDepAndJarMojo {
         oar.addZipfileset(fileSetOpstring);
 
         List<String> attached = new ArrayList<String>();
-        for(Object o : getMavenProject().getAttachedArtifacts()) {
+        for(Object o : project.getAttachedArtifacts()) {
             AttachedArtifact a = (AttachedArtifact)o;
             StringBuilder sb = new StringBuilder();
             sb.append(a.getGroupId());
@@ -192,7 +213,7 @@ public class OarMojo extends ClassDepAndJarMojo {
         Manifest manifest = new Manifest();
         try {
             manifest.addConfiguredAttribute(new Manifest.Attribute("OAR-Name", oarName));
-            manifest.addConfiguredAttribute(new Manifest.Attribute("OAR-Version", getMavenProject().getVersion()));
+            manifest.addConfiguredAttribute(new Manifest.Attribute("OAR-Version", "1"));
             manifest.addConfiguredAttribute(new Manifest.Attribute("OAR-OperationalString", getOpStringFile().getName()));
             manifest.addConfiguredAttribute(new Manifest.Attribute("OAR-Activation", activation));
             if(!attached.isEmpty()) {
@@ -225,7 +246,7 @@ public class OarMojo extends ClassDepAndJarMojo {
         oar.execute();
         if(!project.getPackaging().equals("oar")) {
             getLog().info("Attaching artifact "+oarFile.getName()+" as type oar");
-            getProjectHelper().attachArtifact(project, "oar", null, oarFile);
+            projectHelper.attachArtifact(project, "oar", null, oarFile);
             for(Object o : project.getAttachedArtifacts()) {
                 if(o instanceof AttachedArtifact) {
                     AttachedArtifact a = (AttachedArtifact)o;
@@ -238,7 +259,7 @@ public class OarMojo extends ClassDepAndJarMojo {
                 }
             }
         } else {
-            getMavenProject().getArtifact().setFile(oarFile);
+            project.getArtifact().setFile(oarFile);
         }
     }
 
@@ -281,6 +302,24 @@ public class OarMojo extends ClassDepAndJarMojo {
         return (String)getChecksumPolicy.invoke(support);
     }
 
+    protected Collection getDependencies() {
+        return dependencies;
+    }
+
+    protected void parseDependenciesAndBuildClasspath(Path classpath) {
+        for (Object dependency : getDependencies()) {
+            Artifact artifact = (Artifact) dependency;
+            if ("pom".equalsIgnoreCase(artifact.getType())) {
+                getLog().debug("Skipping pom artifact element " + artifact.getFile());
+                continue;
+            }
+            getLog().debug("Found artifact element " + artifact.getFile());
+            if (artifact.getFile() != null)
+                classpath.append(new Path(antProject,
+                                          artifact.getFile().toString()));
+        }
+    }
+
     protected String getOarName() {
         return oarName;
     }
@@ -291,21 +330,6 @@ public class OarMojo extends ClassDepAndJarMojo {
 
     protected boolean getEncodeRepositories() {
         return encodeRepositories;
-    }
-
-    @Override
-    protected MavenProject getMavenProject() {
-        return project;
-    }
-
-    @Override
-    protected Collection getDependencies() {
-        return dependencies;
-    }
-
-    @Override
-    protected MavenProjectHelper getProjectHelper() {
-        return projectHelper;
     }
 
     protected String getOpstring() {
