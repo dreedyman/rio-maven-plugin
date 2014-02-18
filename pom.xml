@@ -1,11 +1,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-    <parent>
+    <!--<parent>
         <groupId>org.sonatype.oss</groupId>
         <artifactId>oss-parent</artifactId>
         <version>7</version>
-    </parent>
+    </parent>-->
     <modelVersion>4.0.0</modelVersion>
 	<artifactId>maven-rio-plugin</artifactId>
     <groupId>org.apache.maven.plugins</groupId>
@@ -50,6 +50,14 @@
             </plugin>
         </plugins>
     </reporting>
+
+    <distributionManagement>
+        <repository>
+            <id>rio</id>
+            <name>Rio Repository</name>
+            <url>ftp://www.rio-project.org/maven2</url>
+        </repository>
+    </distributionManagement>
 
     <developers>
         <developer>
@@ -125,12 +133,12 @@
    
     <build>
         <extensions>
-	        <extension>
-		        <groupId>org.apache.maven.wagon</groupId>
-		        <artifactId>wagon-ssh</artifactId>
-		        <version>1.0-beta-6</version>
-		      </extension>
-	    </extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ftp</artifactId>
+                <version>1.0-beta-6</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
